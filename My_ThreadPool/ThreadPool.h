@@ -4,6 +4,7 @@
 #include <deque>
 #include <mutex>
 #include <shared_mutex>
+#include <condition_variable>
 
 class ThreadPool{
 public:
@@ -18,13 +19,13 @@ public:
     std::future<typename std::invoke_result_t<Func, Args...>::type> push(Func&& func, Args&&... args);
     
     //设置线程任务暂停/运行
-    void setStopFlag(bool statu=false);
+    void setStopFlag(const bool status);
     
     /*
      * 构造线程池
      * @n 线程数量
     */
-    explicit ThreadPool(const int n=0);
+    explicit ThreadPool(const int nThreads);
 
     ~ThreadPool();
 
@@ -38,5 +39,7 @@ private:
     
     std::mutex m_mtx;
     std::shared_mutex m_rw_mtx;
+    std::condition_variable m_cv;
 
-}
+    bool m_stopFlag;
+};
