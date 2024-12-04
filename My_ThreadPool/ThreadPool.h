@@ -30,14 +30,17 @@ public:
     ~ThreadPool();
 
 private:
+    void doTask();
 
     ThreadPool(const ThreadPool&)=delete;
     ThreadPool& operator=(const ThreadPool&)=delete;
 
     std::vector<std::thread> m_threads;
-    std::deque<std::function<void()>> m_tasks;
+    std::deque<std::unique_ptr<std::function<void()>>> m_tasks;
     
+    //控制m_tasks访问
     std::mutex m_mtx;
+    //控制m_StopFlag访问
     std::shared_mutex m_rw_mtx;
     std::condition_variable m_cv;
 
