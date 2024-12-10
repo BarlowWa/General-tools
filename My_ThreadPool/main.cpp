@@ -23,13 +23,15 @@ int main(){
     ThreadPool tp(2);
     std::vector<std::future<int>> res0,res1;
     
+    std::cout<<"test start:\n";
     test(tp,res0,res1);
+    std::cout<<"test end\n";
     for(std::future<int>& f:res0 ){
-        std::cout<<f.get()<<'\t';
+        std::cout<<f.get()<<'\n';
     }
     std::cout<<std::endl;
     for(std::future<int>& f:res1 ){
-        std::cout<<f.get()<<'\t';
+        std::cout<<f.get()<<'\n';
     }
     std::cout<<std::endl;
 

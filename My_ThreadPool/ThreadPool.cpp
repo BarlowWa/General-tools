@@ -1,7 +1,8 @@
 #include "ThreadPool.h"
-
+#include <thread>
+/*
 template <class Func, class... Args>
-std::future<std::invoke_result_t<Func, Args...>>
+std::future<typename std::invoke_result<Func, Args...>::type>
 ThreadPool::push(Func &&func, Args &&...args) {
   using return_type = std::invoke_result_t<Func, Args...>;
 
@@ -20,7 +21,7 @@ ThreadPool::push(Func &&func, Args &&...args) {
 
   return ret;
 }
-
+*/
 void ThreadPool::setPauseFlag(const bool status = true) {
   if (this->m_pauseFlag.load() == status)
     return;
@@ -31,7 +32,8 @@ void ThreadPool::setPauseFlag(const bool status = true) {
   }
 }
 
-ThreadPool::ThreadPool(const int nThreads = 2) : m_stopFlag(false) {
+ThreadPool::ThreadPool(const int nThreads = 2)
+    : m_stopFlag(false), m_pauseFlag(false) {
   if (nThreads <= 0) {
     throw std::range_error("nThreads out of range");
   }
@@ -43,21 +45,26 @@ ThreadPool::ThreadPool(const int nThreads = 2) : m_stopFlag(false) {
   for (int i = 0; i < n; i++) {
     m_threads.emplace_back([this] { this->doTask(); });
   }
+  std::cout << "Child threads' number:" << m_threads.size() << std::endl;
+  std::cout << "ThreadPool constructed\n";
 }
 
 void ThreadPool::doTask() {
+  std::cout << "Child thread start:" << std::this_thread::get_id() << std::endl;
   while (!this->m_stopFlag.load()) {
-    std::unique_ptr<std::function<void()>> task_ptr;
+    std::function<void()> task;
     {
       std::unique_lock<std::mutex> ulck(this->m_mtx);
-      this->m_cv.wait(ulck, !m_pauseFlag.load() && !m_tasks.empty());
-
-      task_ptr = std::move(m_tasks.front());
+      this->m_cv.wait(ulck,
+                      [&] { return !m_pauseFlag.load() && !m_tasks.empty(); });
+      std::cout << "cv get lock\n";
+      task = std::move(m_tasks.front());
       m_tasks.pop_front();
     }
 
-    (*task_ptr)();
+    task();
   }
+  std::cout << "Child thread exit:" << std::this_thread::get_id() << std::endl;
 
   return;
 }
