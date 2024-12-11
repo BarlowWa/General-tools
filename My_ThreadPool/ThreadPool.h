@@ -12,7 +12,7 @@ public:
   /*
   push 新的任务
   @func 函数名
-  @args 函数参数
+  @args 函数参数，需要支持copy construct
   @ret 返回对应future对象
   */
   template <class Func, class... Args>
@@ -54,7 +54,7 @@ template <class Func, class... Args>
 std::future<std::invoke_result_t<Func, Args...>>
 ThreadPool::push(Func &&func, Args &&...args) {
   using return_type = std::invoke_result_t<Func, Args...>;
-  std::cout<<"push task--";
+  std::cout<<"---push task---\n";
 
   auto task_ptr = std::make_shared<std::packaged_task<return_type()>>(
       std::bind(std::forward<Func>(func), std::forward<Args>(args)...)

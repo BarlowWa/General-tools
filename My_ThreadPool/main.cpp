@@ -1,40 +1,104 @@
-#include <iostream>
 #include "ThreadPool.h"
 #include <chrono>
-#include <thread>
+#include <exception>
 #include <future>
+#include <iostream>
+#include <thread>
 
-int func(int id, int time){
-    std::cout<<"id:"<<id<<'\t';
-    std::cout<<"thread_id:"<<std::this_thread::get_id()<<std::endl;
-    std::this_thread::sleep_for(std::chrono::seconds(time));
-    return id;
+class Test {
+public:
+  Test() { std::cout << "Test construction\n"; }
+  Test(const Test &) { std::cout << "Test copy construction\n"; }
+  Test(const Test &&) { std::cout << "Test move construction\n"; }
+};
+
+void test_push(ThreadPool &tp) {
+    std::cout<<"------------- test_push -------------\n";
+  // 多线程执行测试
+  {
+    std::vector<std::future<int>> res;
+    for (int i = 0; i < 5; i++) {
+      res.push_back(tp.push(
+          [](int a) {
+            std::cout << "[task" << a
+                      << "]\tChild thread id:" << std::this_thread::get_id()
+                      << std::endl;
+            return a;
+          },
+          i));
+    }
+    std::cout << "answers:\t";
+    for (std::future<int> &fut : res) {
+      std::cout << fut.get() << "\t";
+    }
+  }
+
+  // 参数传递测试
+  {
+    Test t;
+    std::cout << "t_addr:" << &t << std::endl;
+    auto addr = tp.push(
+        [](Test &t) { std::cout << "parameter t's addr:" << &t << std::endl; },
+        t);
+    addr.get();
+  }
+
+  //变量捕获测试
+  {
+      Test t;
+    std::cout << "t_addr:" << &t << std::endl;
+    auto addr = tp.push(
+        [&t] { std::cout << "variable t's addr:" << &t << std::endl; }
+        );
+    addr.get();
+    }
+  std::cout << "\ntest_push finished.\n";
 }
 
-void test(ThreadPool& tp, std::vector<std::future<int>>& res0,std::vector<std::future<int>>& res1) {
-    for(int i=0;i<5;i++){
-        res0.push_back(tp.push(func,0,2));
+void test_pause(ThreadPool &tp) {
+    std::cout<<"------------- test_pause -------------\n";
+    std::vector<std::future<int>> res;
+    for (int i = 0; i < 5; i++) {
+      res.push_back(tp.push(
+          [](int a) {
+            std::cout << "[task" << a
+                      << "]\tChild thread id:" << std::this_thread::get_id()
+                      << std::endl;
+            return a;
+          },
+          i));
     }
-    for(int i=0;i<5;i++){
-        res1.push_back(tp.push(func,1,3));
-    }
-}
-int main(){
-    ThreadPool tp(2);
-    std::vector<std::future<int>> res0,res1;
     
-    std::cout<<"test start:\n";
-    test(tp,res0,res1);
-    std::cout<<"test end\n";
-    for(std::future<int>& f:res0 ){
-        std::cout<<f.get()<<'\n';
-    }
-    std::cout<<std::endl;
-    for(std::future<int>& f:res1 ){
-        std::cout<<f.get()<<'\n';
-    }
-    std::cout<<std::endl;
+    using namespace std::chrono;
+    res[3].get();
+    tp.setPauseFlag(true);
 
-    return 0;
+    auto t=system_clock::to_time_t(system_clock::now());
+    std::cout<<"time:"<<ctime(&t);
+
+    std::this_thread::sleep_for(std::chrono::seconds(5));
+    tp.setPauseFlag(false);
+
+    t=system_clock::to_time_t(system_clock::now());
+    std::cout<<"time:"<<ctime(&t);
+
+    res.back().get();
+
+    std::cout<<"test_pause finished.\n";
 }
 
+int main() {
+  ThreadPool tp(2);
+
+  std::cout << "test start:\n";
+    try{
+  test_push(tp);
+  test_pause(tp);
+    }
+    catch(std::exception &e){
+        std::cout<<"catch error:"<<e.what();
+    }
+
+  std::cout << "test end\n";
+  return 0;
+}
